@@ -84,7 +84,7 @@ li strong{font-weight:500;white-space:nowrap}
 <div id="v-login" class="center hide">
   <h1 class="serif" style="font-size:30px">Quỹ chi tiêu đôi</h1>
   <p class="mute">Ghi chi tiêu nhanh, cùng nhìn một quỹ.</p>
-  <div class="card"><button class="btn" id="b-google">Đăng nhập bằng Google</button><small id="login-err"></small><small class="mute">Phiên bản 3</small></div>
+  <div class="card"><button class="btn" id="b-google">Tiếp tục với Google</button><button class="btn alt" id="b-fb">Tiếp tục với Facebook</button><small id="login-err"></small><small class="mute">Phiên bản 4</small></div>
 </div>
 
 <div id="v-setup" class="center hide">
@@ -152,7 +152,7 @@ li strong{font-weight:500;white-space:nowrap}
   <button id="d-join">🔑 Nhập mã kết nối</button>
   <div class="sep"></div>
   <button id="d-out">Đăng xuất</button>
-  <small class="mute" style="margin:10px 12px 0">Phiên bản 3</small>
+  <small class="mute" style="margin:10px 12px 0">Phiên bản 4</small>
 </nav>
 <div class="dock"><div>
   <form class="box" id="f"><input id="in" placeholder="Ví dụ: cà phê 45k  hoặc  200000 đi chợ" autocomplete="off" aria-label="Nhập khoản chi"><button class="btn" type="submit">Ghi</button></form>
@@ -162,7 +162,7 @@ li strong{font-weight:500;white-space:nowrap}
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getAuth,GoogleAuthProvider,FacebookAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,updateDoc,addDoc,deleteDoc,collection,onSnapshot,query,orderBy,arrayUnion,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app=initializeApp({
@@ -192,10 +192,19 @@ let user=null,fund=null,fid=null,items=[],unsubs=[];
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-$('b-google').onclick=async()=>{
-  try{await signInWithPopup(auth,new GoogleAuthProvider())}
-  catch(e){$('login-err').textContent='Không đăng nhập được ('+(e.code||'lỗi')+'). Kiểm tra mục Tên miền được ủy quyền trong Firebase.'}
-};
+async function login(provider){
+  $('login-err').textContent='';
+  try{await signInWithPopup(auth,provider)}
+  catch(e){
+    const c=e.code||'';
+    $('login-err').textContent=(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')?'':
+      c==='auth/account-exists-with-different-credential'?'Email này đã dùng đăng nhập bằng cách khác (Google hoặc Facebook). Hãy thử cách còn lại.':
+      c==='auth/popup-blocked'?'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên rồi thử lại.':
+      'Không đăng nhập được ('+(c||'lỗi')+').';
+  }
+}
+$('b-google').onclick=()=>{const g=new GoogleAuthProvider();g.setCustomParameters({prompt:'select_account'});login(g)};
+$('b-fb').onclick=()=>login(new FacebookAuthProvider());
 const out=()=>signOut(auth);$('b-out1').onclick=out;$('b-out2').onclick=out;
 
 onAuthStateChanged(auth,async u=>{
